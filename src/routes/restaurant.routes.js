@@ -1,5 +1,5 @@
 const router = require('express').Router();
-const resolveRestaurant = require('../middlewares/resolveRestaurant.middleware');
+const resolveRestaurant = require('../middlewares/resolverestaurant.middleware');
 const restaurantController = require('../controllers/restaurant.controller');
 const menuController = require('../controllers/menu.controller');
 const { asyncHandler } = require('../middlewares/error.middleware');
