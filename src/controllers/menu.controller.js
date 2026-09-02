@@ -11,54 +11,54 @@ const {
 
 /**
  * GET /api/restaurantes/:slug/menu
- * Devuelve el restaurante con sus categorías, productos y todo lo
- * necesario para pintar el menú público (fotos, ingredientes,
- * alérgenos y modificadores). Pensado como el primer endpoint real
- * del proyecto: "solo ver el menú de una tienda".
+ * Vista PÚBLICA del menú (la que consume el front del cliente en la
+ * mesa): solo categorías activas y productos disponibles. Para la
+ * vista de administrador (que necesita ver todo, incluida producto
+ * pausado/categoría oculta) usa category.controller.js / product.controller.js.
  */
 async function getMenuBySlug(req, res) {
-  try {
-    const { slug } = req.params;
+  const restaurant = req.restaurant; // ya resuelto por resolveRestaurant.middleware.js
 
-    const restaurant = await Restaurant.findOne({
-      where: { slug, status: ['active', 'trial'] },
-      attributes: ['id', 'name', 'slug', 'description', 'logoUrl', 'coverUrl', 'city', 'currency'],
-    });
+  const categories = await MenuCategory.findAll({
+    where: { restaurantId: restaurant.id, isActive: true },
+    order: [['sortOrder', 'ASC']],
+    include: [
+      {
+        model: Product,
+        as: 'products',
+        where: { isAvailable: true },
+        required: false,
+        order: [['sortOrder', 'ASC']],
+        include: [
+          { model: ProductMedia, as: 'media' },
+          { model: Ingredient, as: 'ingredients', through: { attributes: [] } },
+          { model: Allergen, as: 'allergens', through: { attributes: [] } },
+          {
+            model: ModifierGroup,
+            as: 'modifierGroups',
+            through: { attributes: [] },
+            include: [{ model: Modifier, as: 'modifiers' }],
+          },
+        ],
+      },
+    ],
+  });
 
-    if (!restaurant) {
-      return res.status(404).json({ error: 'Restaurante no encontrado.' });
-    }
+  const publicRestaurant = {
+    id: restaurant.id,
+    name: restaurant.name,
+    slug: restaurant.slug,
+    description: restaurant.description,
+    logoUrl: restaurant.logoUrl,
+    coverUrl: restaurant.coverUrl,
+    city: restaurant.city,
+    currency: restaurant.currency,
+    primaryColor: restaurant.primaryColor,
+    secondaryColor: restaurant.secondaryColor,
+    fontFamily: restaurant.fontFamily,
+  };
 
-    const categories = await MenuCategory.findAll({
-      where: { restaurantId: restaurant.id, isActive: true },
-      order: [['sortOrder', 'ASC']],
-      include: [
-        {
-          model: Product,
-          as: 'products',
-          where: { isAvailable: true },
-          required: false,
-          order: [['sortOrder', 'ASC']],
-          include: [
-            { model: ProductMedia, as: 'media' },
-            { model: Ingredient, as: 'ingredients', through: { attributes: [] } },
-            { model: Allergen, as: 'allergens', through: { attributes: [] } },
-            {
-              model: ModifierGroup,
-              as: 'modifierGroups',
-              through: { attributes: [] },
-              include: [{ model: Modifier, as: 'modifiers' }],
-            },
-          ],
-        },
-      ],
-    });
-
-    return res.json({ restaurant, categories });
-  } catch (err) {
-    console.error(err);
-    return res.status(500).json({ error: 'Error consultando el menú.' });
-  }
+  return res.json({ restaurant: publicRestaurant, categories });
 }
 
 module.exports = { getMenuBySlug };

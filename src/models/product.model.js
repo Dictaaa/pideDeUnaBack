@@ -17,23 +17,23 @@ class Product extends Model {
       as: 'media',
     });
     Product.belongsToMany(db.Ingredient, {
-  through: db.ProductIngredient,
-  foreignKey: 'productId',
-  otherKey: 'ingredientId',
-  as: 'ingredients',
-});
-Product.belongsToMany(db.Allergen, {
-  through: db.ProductAllergen,
-  foreignKey: 'productId',
-  otherKey: 'allergenId',
-  as: 'allergens',
-});
-Product.belongsToMany(db.ModifierGroup, {
-  through: db.ProductModifierGroup,
-  foreignKey: 'productId',
-  otherKey: 'modifierGroupId',
-  as: 'modifierGroups',
-});
+      through: db.ProductIngredient,
+      foreignKey: 'productId',
+      otherKey: 'ingredientId',
+      as: 'ingredients',
+    });
+    Product.belongsToMany(db.Allergen, {
+      through: db.ProductAllergen,
+      foreignKey: 'productId',
+      otherKey: 'allergenId',
+      as: 'allergens',
+    });
+    Product.belongsToMany(db.ModifierGroup, {
+      through: db.ProductModifierGroup,
+      foreignKey: 'productId',
+      otherKey: 'modifierGroupId',
+      as: 'modifierGroups',
+    });
   }
 }
 

@@ -1,20 +1,12 @@
-// src/middlewares/upload.middleware.js
 const multer = require('multer');
 
-// memoryStorage — el buffer va directo a Supabase (sin guardar en disco)
-const storage = multer.memoryStorage();
-
-const fileFilter = (_req, file, cb) => {
-  const allowed = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'];
-  if (allowed.includes(file.mimetype)) {
-    cb(null, true);
-  } else {
-    cb(new Error('Formato no permitido. Usa JPG, PNG, WebP o PDF'), false);
-  }
-};
-
-exports.upload = multer({
-  storage,
-  fileFilter,
-  limits: { fileSize: 5 * 1024 * 1024 },  // 5 MB
+// memoryStorage: el archivo llega como buffer en memoria (req.file.buffer),
+// que es justo lo que storage.service.js espera para subirlo a Supabase.
+// El límite aquí es el techo absoluto (el más grande, video); el service
+// aplica límites más finos por tipo (imagen vs. video vs. documento).
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 60 * 1024 * 1024 }, // 60 MB techo duro
 });
+
+module.exports = upload;
