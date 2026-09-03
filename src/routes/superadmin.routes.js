@@ -1,5 +1,5 @@
 const router = require('express').Router();
-const ctrl = require('../controllers/superadmin.controller');
+const ctrl = require('../controllers/Superadmin.controller');
 const { authenticate, authorize } = require('../middlewares/auth.middleware');
 const { asyncHandler } = require('../middlewares/error.middleware');
 
