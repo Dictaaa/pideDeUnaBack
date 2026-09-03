@@ -45,8 +45,15 @@ async function login(req, res) {
 
   let restaurantPayload = null;
   if (user.restaurantId) {
-    const restaurant = await Restaurant.findByPk(user.restaurantId, { attributes: ['id', 'slug', 'name'] });
-    if (restaurant) restaurantPayload = { id: restaurant.id, slug: restaurant.slug, name: restaurant.name };
+    const restaurant = await Restaurant.findByPk(user.restaurantId, {
+      attributes: ['id', 'slug', 'name', 'status'],
+    });
+    if (restaurant) {
+      if (restaurant.status === 'suspended' || restaurant.status === 'cancelled') {
+        return res.status(403).json({ error: 'Esta cuenta está suspendida. Contacta a soporte.' });
+      }
+      restaurantPayload = { id: restaurant.id, slug: restaurant.slug, name: restaurant.name };
+    }
   }
 
   const roleCodes = user.roles.map((r) => r.code);

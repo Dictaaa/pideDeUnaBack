@@ -1,7 +1,13 @@
 const { DataTypes, Model } = require('sequelize');
 const { sequelize } = require('../config/db');
 
-class Subscription extends Model {}
+class Subscription extends Model {
+// ── Asociaciones ──────────────────────────────────────
+  static associate(db) {
+    Subscription.belongsTo(db.Restaurant, { foreignKey: 'restaurantId', as: 'restaurant' });
+    Subscription.belongsTo(db.Plan, { foreignKey: 'planId', as: 'plan' });
+  }
+}
 
 Subscription.init(
   {

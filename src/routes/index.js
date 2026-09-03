@@ -8,6 +8,7 @@ const roleRoutes         = require('./role.routes');       // catálogo global d
 const permissionRoutes   = require('./permission.routes'); // catálogo global de permisos
 const planRoutes         = require('./plan.routes');       // catálogo global de planes
 const authAdminRoutes    = require('./authAdmin.routes');  // login del SUPER_ADMIN (global, sin slug)
+const superAdminRoutes   = require('./superadmin.routes');
 
 // ── Módulos con prefijo ───────────────────────────────────
 router.use('/restaurantes', restaurantRoutes);
@@ -16,6 +17,7 @@ router.use('/roles', roleRoutes);
 router.use('/permisos', permissionRoutes);
 router.use('/planes', planRoutes);
 router.use('/auth', authAdminRoutes);
+router.use('/super-admin', superAdminRoutes);
 
 // ── Salud ──────────────────────────────────────────────────
 router.get('/health', (_req, res) => res.json({ ok: true }));

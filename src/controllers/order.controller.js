@@ -1,4 +1,12 @@
-const { Order, OrderItem, Table, TableSession, Product, sequelize } = require('../models');
+const { Order, OrderItem, Table, TableSession, Product, Payment, sequelize } = require('../models');
+
+// Cómo se cobró un pedido — cubre los 3 escenarios reales de un
+// restaurante: efectivo, tarjeta por datáfono aparte (no procesamos el
+// cobro, solo lo registramos), pasarela en línea (Wompi/ePayco, si el
+// restaurante la tiene conectada por fuera), o "otro" para lo que no
+// encaje. Esto NO integra Wompi/ePayco de verdad (eso pediría checkout,
+// webhooks, llaves de API) — es un registro manual de trazabilidad.
+const PAYMENT_METHODS = ['CASH', 'CARD', 'TRANSFER', 'WOMPI', 'EPAYCO', 'OTHER'];
 
 // Estados que todavía están "vivos" — los que ve la mesera/cocina por defecto.
 const ACTIVE_STATUSES = ['PENDING', 'PREPARING', 'READY'];
@@ -172,7 +180,15 @@ async function advance(req, res) {
   return res.json(fresh);
 }
 
-/** POST /:id/serve — la mesera marca el pedido como entregado (READY -> SERVED). */
+/**
+ * POST /:id/serve — la mesera cobra y cierra el pedido.
+ * body: { paymentMethod, transactionReference? }
+ * paymentMethod es obligatorio (CASH|CARD|TRANSFER|WOMPI|EPAYCO|OTHER).
+ * transactionReference es OPCIONAL — el número de factura/comprobante
+ * que haya quedado del datáfono, de Wompi, de ePayco, o del sistema
+ * propio del restaurante. Solo se guarda para trazabilidad, no se
+ * valida contra ningún banco ni pasarela real.
+ */
 async function serve(req, res) {
   const order = await Order.findOne({ where: { id: req.params.id, restaurantId: req.restaurant.id } });
   if (!order) return res.status(404).json({ error: 'Pedido no encontrado.' });
@@ -181,7 +197,23 @@ async function serve(req, res) {
     return res.status(400).json({ error: 'El pedido todavía no está listo en cocina.' });
   }
 
-  await order.update({ status: 'SERVED', completedAt: new Date() });
+  const { paymentMethod, transactionReference } = req.body;
+  if (!PAYMENT_METHODS.includes(paymentMethod)) {
+    return res.status(400).json({ error: 'Elige un método de pago válido.' });
+  }
+
+  await Payment.create({
+    restaurantId: req.restaurant.id,
+    orderId: order.id,
+    amount: order.total,
+    currency: req.restaurant.currency || 'COP',
+    paymentMethod,
+    status: 'APPROVED', // lo cobró la mesera en el momento — no hay pasarela real que confirme esto
+    transactionReference: transactionReference || null,
+    paidAt: new Date(),
+  });
+
+  await order.update({ status: 'COMPLETED', completedAt: new Date() });
   const fresh = await Order.findByPk(order.id, { include: ORDER_INCLUDE });
   return res.json(fresh);
 }

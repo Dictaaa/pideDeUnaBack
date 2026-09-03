@@ -118,11 +118,13 @@ async function register(req, res) {
   const restaurant = await Restaurant.create({ name: restaurantName, slug, status: 'trial' });
   await RestaurantSetting.create({ restaurantId: restaurant.id });
 
-  const freePlan = await Plan.findOne({ where: { code: 'FREE' } });
-  if (freePlan) {
+  // Ningún plan es gratis: el registro arranca en trial de 14 días
+  // sobre el plan más económico disponible (no hay un plan "FREE").
+  const startingPlan = await Plan.findOne({ where: { isActive: true }, order: [['priceMonthly', 'ASC']] });
+  if (startingPlan) {
     await Subscription.create({
       restaurantId: restaurant.id,
-      planId: freePlan.id,
+      planId: startingPlan.id,
       status: 'trial',
       trialEndsAt: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000), // 14 días
     });

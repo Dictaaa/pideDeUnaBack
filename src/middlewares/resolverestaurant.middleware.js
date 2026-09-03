@@ -15,6 +15,13 @@ async function resolveRestaurant(req, res, next) {
       return res.status(404).json({ error: 'Restaurante no encontrado.' });
     }
 
+    // Cubre tanto al staff con sesión ya iniciada (el login ya bloquea
+    // el inicio de sesión nuevo) como al menú público — un restaurante
+    // suspendido no debe seguir operando ni visible, en ningún punto.
+    if (restaurant.status === 'suspended' || restaurant.status === 'cancelled') {
+      return res.status(403).json({ error: 'Este restaurante no está disponible en este momento.' });
+    }
+
     req.restaurant = restaurant;
     next();
   } catch (err) {

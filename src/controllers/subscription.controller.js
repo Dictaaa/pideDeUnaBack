@@ -1,4 +1,5 @@
-const { Subscription, Plan } = require('../models');
+const { Subscription, Plan, MenuCategory, Product, Table, User, ProductMedia } = require('../models');
+const { getActiveSubscription } = require('../middlewares/planLimit.middleware');
 
 /** GET /api/restaurantes/:slug/subscription — la suscripción activa/trial actual */
 async function getCurrent(req, res) {
@@ -41,4 +42,45 @@ async function changePlan(req, res) {
   return res.status(201).json(fresh);
 }
 
-module.exports = { getCurrent, changePlan };
+module.exports = { getCurrent, changePlan, getUsage };
+
+/**
+ * GET /api/restaurantes/:slug/subscription/usage
+ * Cuánto de cada límite del plan ya se usó — lo consume la pantalla
+ * de Plan del admin para mostrar barras de progreso y avisar antes
+ * de que el 403 de enforcePlanLimit lo sorprenda a mitad de un formulario.
+ */
+async function getUsage(req, res) {
+  const subscription = await getActiveSubscription(req.restaurant.id);
+  if (!subscription || !subscription.plan) {
+    return res.status(404).json({ error: 'Este restaurante no tiene una suscripción activa.' });
+  }
+
+  const restaurantId = req.restaurant.id;
+  const [categories, products, tables, users, photos, videos] = await Promise.all([
+    MenuCategory.count({ where: { restaurantId } }),
+    Product.count({ where: { restaurantId } }),
+    Table.count({ where: { restaurantId } }),
+    User.count({ where: { restaurantId } }),
+    ProductMedia.count({ where: { restaurantId, mediaType: 'IMAGE' } }),
+    ProductMedia.count({ where: { restaurantId, mediaType: 'VIDEO' } }),
+  ]);
+
+  const plan = subscription.plan;
+  return res.json({
+    subscription: {
+      status: subscription.status,
+      expiresAt: subscription.expiresAt,
+      trialEndsAt: subscription.trialEndsAt,
+    },
+    plan,
+    usage: {
+      categories: { used: categories, limit: plan.maxCategories },
+      products: { used: products, limit: plan.maxProducts },
+      tables: { used: tables, limit: plan.maxTables },
+      users: { used: users, limit: plan.maxUsers },
+      photos: { used: photos, limit: plan.maxPhotos },
+      videos: { used: videos, limit: plan.maxVideos },
+    },
+  });
+}
